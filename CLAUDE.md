@@ -126,6 +126,7 @@ Notes:
 - **`src/extract_po.py`** — reads a PDF from `samples/`, returns a structured dictionary.
 - **`src/extract_po.py` → `validate(po)`** — 8 checks (required fields, line items present, per-item fields, per-item arithmetic, subtotal, GST, grand total, date sanity). Never raises; returns a list of warning strings. All floating-point comparisons use ±$0.01 tolerance.
 - **`src/write_csv.py`** — writes `output/<po_number>.csv` in three sections (PO header / Ship-to address / Line items), plus an optional Warnings section if validation produced any issues.
+- **`src/batch.py`** — batch processor for a folder of PDFs. Iterates `samples/*.pdf`, runs extract → validate → write_csv for each, and prints a summary report (status, PO number, source file, item count, total, warning count). Per-PDF errors are caught and logged as `[FAIL]` rows so one bad PDF doesn't take down the run; exit code is non-zero if any PDF failed. Validation pipeline verified end-to-end against the deliberately-broken `PO-2026-04815` (line-total mismatch surfaces correctly as a `[WARN]`).
 
 ## Lessons learned
 
