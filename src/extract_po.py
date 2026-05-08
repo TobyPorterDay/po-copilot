@@ -132,11 +132,86 @@ def extract_po(pdf_path):
         }
 
 
+def validate(po):
+    warnings = []
+    CENT = 0.01
+
+    # 1. Required fields
+    for field in ("po_number", "date", "vendor", "total"):
+        if not po.get(field):
+            warnings.append(f"Missing required field: {field}")
+
+    # 2. At least one line item
+    items = po.get("line_items") or []
+    if not items:
+        warnings.append("No line items found")
+
+    for i, item in enumerate(items):
+        label = item.get("sku") or f"item[{i}]"
+
+        # 3. Per-item fields present
+        for field in ("sku", "description", "qty", "unit_price", "line_total"):
+            if item.get(field) is None or item.get(field) == "":
+                warnings.append(f"{label}: missing {field}")
+
+        # 4. Per-item arithmetic
+        qty, unit_price, line_total = item.get("qty"), item.get("unit_price"), item.get("line_total")
+        if None not in (qty, unit_price, line_total):
+            expected = round(qty * unit_price, 2)
+            if abs(expected - line_total) > CENT:
+                warnings.append(
+                    f"{label}: qty×unit_price ({qty}×{unit_price}={expected}) "
+                    f"doesn't match line_total ({line_total})"
+                )
+
+    # 5. Subtotal sanity
+    subtotal = po.get("subtotal")
+    line_totals = [it.get("line_total") for it in items]
+    if subtotal is not None and all(v is not None for v in line_totals):
+        calc = round(sum(line_totals), 2)
+        if abs(calc - subtotal) > CENT:
+            warnings.append(f"Subtotal mismatch: sum of line_totals={calc}, extracted subtotal={subtotal}")
+
+    # 6. GST sanity
+    gst = po.get("gst")
+    if subtotal is not None and gst is not None:
+        expected_gst = round(subtotal * 0.15, 2)
+        if abs(expected_gst - gst) > CENT:
+            warnings.append(f"GST mismatch: 15% of subtotal={expected_gst}, extracted GST={gst}")
+
+    # 7. Grand total sanity
+    total = po.get("total")
+    if None not in (subtotal, gst, total):
+        calc_total = round(subtotal + gst + (po.get("shipping") or 0) + (po.get("other") or 0), 2)
+        if abs(calc_total - total) > CENT:
+            warnings.append(f"Total mismatch: subtotal+gst+shipping+other={calc_total}, extracted total={total}")
+
+    # 8. Date sanity
+    from datetime import datetime
+    date = po.get("date")
+    if date:
+        try:
+            parsed = datetime.strptime(date, "%d/%m/%Y")
+            if not (2020 <= parsed.year <= 2030):
+                warnings.append(f"Date year {parsed.year} is outside expected range 2020–2030")
+        except ValueError:
+            warnings.append(f"Date '{date}' is not a valid DD/MM/YYYY date")
+
+    return warnings
+
+
 def main():
     pdf_path = find_pdf()
     print(f"Reading: {pdf_path.name}\n", file=sys.stderr)
     result = extract_po(pdf_path)
     print(json.dumps(result, indent=2))
+    warnings = validate(result)
+    print()
+    if warnings:
+        for w in warnings:
+            print(f"WARNING: {w}")
+    else:
+        print("No warnings.")
 
 
 if __name__ == "__main__":

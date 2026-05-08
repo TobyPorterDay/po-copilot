@@ -83,10 +83,17 @@ Section 3 — one row per product line item:
 `SKU, SKU Qty, Unit Price`
 `FX-M08-50-SS, 250, 0.84`
 
+Section 4 — warnings (only present if validation produced warnings):
+`Warnings`
+`<warning 1>`
+`<warning 2>`
+One warning per row. Omit this section entirely on a clean run.
+
 Notes:
 - Ship To block is the source for address fields (not the Vendor block).
+- ship_to lines in order: line 0 = Contact Name, line 1 = Company Name, line 2 = Street Address, line 3 = suburb/postcode line.
 - In the PDF, suburb and postcode appear on one line as `Glen Innes, Auckland 1072`; split on comma, then extract the trailing 4-digit postcode.
-- GST, Shipping, and Other rows are excluded from the CSV.
+- GST, Shipping, and Other rows are excluded from the line items section of the CSV.
 
 **Totals block fields:** SUBTOTAL, GST 15%, SHIPPING, OTHER, TOTAL (with explicit "NZ$" label)
 
@@ -113,6 +120,22 @@ Notes:
 
 6. **Single page** — this sample fits on one page. Multi-page behaviour
    is still an open question (see "Things to ask" below).
+
+## What's been built
+
+- **`src/extract_po.py`** — reads a PDF from `samples/`, returns a structured dictionary.
+- **`src/extract_po.py` → `validate(po)`** — 8 checks (required fields, line items present, per-item fields, per-item arithmetic, subtotal, GST, grand total, date sanity). Never raises; returns a list of warning strings. All floating-point comparisons use ±$0.01 tolerance.
+- **`src/write_csv.py`** — writes `output/<po_number>.csv` in three sections (PO header / Ship-to address / Line items), plus an optional Warnings section if validation produced any issues.
+
+## Lessons learned
+
+1. **Use `extract_tables()`, not raw text + regex** — pdfplumber's table extractor correctly handles column alignment and cell boundaries; regex on raw text output breaks on wrapped lines and inconsistent whitespace.
+
+2. **Phantom `None` column at index 3** — this PDF's line items table has a spurious empty column between QTY (index 2) and UNIT PRICE (index 4); skip index 3 when reading row values.
+
+3. **Totals rows live inside the line items table** — rows for SUBTOTAL, GST 15%, SHIPPING, OTHER, and TOTAL appear at the bottom of the same table, with the label in column 3 and the value in column 5; filter them out by checking whether column 0 (ITEM #) is empty.
+
+4. **Wrapped SKUs arrive as cells with `\n`** — pdfplumber preserves the line break inside the cell string rather than splitting it into two rows; join on `\n` and strip whitespace to reconstruct the full code.
 
 ## Things to ask me before assuming
 
