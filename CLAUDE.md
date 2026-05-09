@@ -39,6 +39,7 @@ developer. Please default to:
 
 ## Folder layout
 
+- `emails/` — `.eml` files to triage. Ignored by git; drop real emails here.
 - `samples/` — PO PDFs to process. Treat anything here as redacted or
   fake unless I explicitly say otherwise.
 - `output/` — generated CSVs. Safe to overwrite.
@@ -52,6 +53,7 @@ developer. Please default to:
 - If a field isn't present in the PDF, leave it empty in the output —
   never guess.
 - Commits explain *what* and *why*, not just *what*.
+- Do not add `Co-Authored-By:` trailers to commit messages.
 
 ## PO format notes
 
@@ -127,6 +129,7 @@ Notes:
 - **`src/extract_po.py` → `validate(po)`** — 8 checks (required fields, line items present, per-item fields, per-item arithmetic, subtotal, GST, grand total, date sanity). Never raises; returns a list of warning strings. All floating-point comparisons use ±$0.01 tolerance.
 - **`src/write_csv.py`** — writes `output/<po_number>.csv` in three sections (PO header / Ship-to address / Line items), plus an optional Warnings section if validation produced any issues.
 - **`src/batch.py`** — batch processor for a folder of PDFs. Iterates `samples/*.pdf`, runs extract → validate → write_csv for each, and prints a summary report (status, PO number, source file, item count, total, warning count). Per-PDF errors are caught and logged as `[FAIL]` rows so one bad PDF doesn't take down the run; exit code is non-zero if any PDF failed. Validation pipeline verified end-to-end against the deliberately-broken `PO-2026-04815` (line-total mismatch surfaces correctly as a `[WARN]`).
+- **`src/triage.py`** — email triage front-end. Drop `.eml` files into `emails/`, run `python src/triage.py`. Parses each email (subject, sender, body, attachments) with Python's stdlib `email` module, then calls `claude-haiku-4-5` to classify it as `PO-PDF`, `PO-text`, or `not-PO`. Rejects lookalikes (order acknowledgements, quotes, shipping notifications) via a careful system prompt. For every `PO-PDF` hit, saves the attached PDF into `samples/` so `batch.py` can pick it up on the next run. Prints a one-row-per-email triage report plus a summary line.
 
 ## Lessons learned
 

@@ -1,1 +1,3 @@
 pdfplumber
+anthropic
+python-dotenv
