@@ -39,7 +39,7 @@ order Pronto's data-entry screen expects.
 ## Setup
 
 ```
-git clone <repo-url> po-copilot
+git clone https://github.com/TobyPorterDay/po-copilot.git
 cd po-copilot
 python3 -m venv venv
 source venv/bin/activate
