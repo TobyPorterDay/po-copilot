@@ -10,3 +10,4 @@ emails/*.eml
 output/
 output/
 output/
+.DS_Store
