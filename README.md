@@ -3,6 +3,10 @@
 A small command-line tool that reads purchase order PDFs and produces a clean,
 validated CSV ready for manual entry into Pronto ERP.
 
+*Built as part of Anthropic's Claude Code 101 course — a learning
+project demonstrating Plan Mode, the Explore→Plan→Code→Commit loop, and
+integrating the Anthropic API as a component inside a Python script.*
+
 ## What it does
 
 Drop supplier emails into `emails/` and PO PDFs into `samples/`. The triage
