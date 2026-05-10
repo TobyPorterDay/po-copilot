@@ -7,7 +7,3 @@ __pycache__/
 .env
 .claude/
 emails/*.eml
-output/
-output/
-output/
-.DS_Store
